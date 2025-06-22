@@ -64,7 +64,9 @@ function updateRoomStats() {
 }
 
 function generateUsernameLink(data) {
-    return `<a class="usernamelink" href="https://www.tiktok.com/@${data.uniqueId}" target="_blank">${data.uniqueId}</a>`;
+    // Zeige nickname falls vorhanden, sonst uniqueId
+    let displayName = data.nickname || data.uniqueId;
+    return `<a class="usernamelink" href="https://www.tiktok.com/@${data.uniqueId}" target="_blank">${sanitize(displayName)}</a>`;
 }
 
 function isPendingStreak(data) {
@@ -81,7 +83,7 @@ function addChatItem(color, data, text, summarize) {
         container.find('div').slice(0, 200).remove();
     }
 
-    container.find('.temporary').remove();;
+    container.find('.temporary').remove();
 
     container.append(`
         <div class=${summarize ? 'temporary' : 'static'}>
@@ -126,7 +128,7 @@ function addGiftItem(data) {
                                 <span>Cost: <b>${(data.diamondCount * data.repeatCount).toLocaleString()} Diamonds</b><span>
                             </td>
                         </tr>
-                    </tabl>
+                    </table>
                 </div>
             </span>
         </div>
@@ -145,7 +147,6 @@ function addGiftItem(data) {
         scrollTop: container[0].scrollHeight
     }, 800);
 }
-
 
 // viewer stats
 connection.on('roomUser', (msg) => {
