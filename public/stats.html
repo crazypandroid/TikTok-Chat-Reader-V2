@@ -1,82 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Live Statistik</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="/socket.io/socket.io.js"></script>
-  <style>
-    body {
-      background: #111;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 30px;
-    }
-    canvas {
-      max-width: 800px;
-      margin: 30px auto;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>📊 Statistik Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+    <style>
+        body {
+            background: #18171c;
+            color: #e3e5eb;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            text-align: center;
+        }
+        canvas {
+            background: #282c34;
+            border-radius: 8px;
+        }
+    </style>
 </head>
 <body>
-  <h1>📊 TikTok Live Statistik</h1>
-  <canvas id="statsChart" width="800" height="400"></canvas>
+    <h1>Live Verbindungen (global)</h1>
+    <canvas id="connectionChart" width="600" height="300"></canvas>
 
-  <script>
-    const ctx = document.getElementById('statsChart').getContext('2d');
-    const labels = [];
-    const dataPoints = [];
+    <script>
+        const socket = io();
+        const ctx = document.getElementById('connectionChart').getContext('2d');
 
-    const chart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Aktive Verbindungen',
-          backgroundColor: '#36a2eb44',
-          borderColor: '#36a2eb',
-          borderWidth: 2,
-          fill: true,
-          data: dataPoints,
-        }]
-      },
-      options: {
-        responsive: true,
-        animation: false,
-        scales: {
-          x: {
-            ticks: { color: '#aaa' }
-          },
-          y: {
-            beginAtZero: true,
-            ticks: { color: '#aaa' }
-          }
-        },
-        plugins: {
-          legend: {
-            labels: { color: '#fff' }
-          }
-        }
-      }
-    });
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Anzahl Verbindungen',
+                    data: [],
+                    borderColor: 'rgba(0, 200, 255, 0.8)',
+                    fill: false
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        precision: 0
+                    }
+                }
+            }
+        });
 
-    const socket = io();
+        socket.on('statistic', (data) => {
+            const timestamp = new Date().toLocaleTimeString();
+            chart.data.labels.push(timestamp);
+            chart.data.datasets[0].data.push(data.globalConnectionCount);
 
-    socket.on('statistic', (data) => {
-      const time = new Date().toLocaleTimeString();
-      labels.push(time);
-      dataPoints.push(data.globalConnectionCount);
+            if (chart.data.labels.length > 20) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+            }
 
-      // Halte nur die letzten 20 Punkte
-      if (labels.length > 20) {
-        labels.shift();
-        dataPoints.shift();
-      }
-
-      chart.update();
-    });
-  </script>
+            chart.update();
+        });
+    </script>
 </body>
 </html>
