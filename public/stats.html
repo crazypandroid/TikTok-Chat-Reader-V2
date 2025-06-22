@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Live Statistik</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body {
+      background: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 30px;
+    }
+    canvas {
+      max-width: 800px;
+      margin: 30px auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>📊 TikTok Live Statistik</h1>
+  <canvas id="statsChart" width="800" height="400"></canvas>
+
+  <script>
+    const ctx = document.getElementById('statsChart').getContext('2d');
+    const labels = [];
+    const dataPoints = [];
+
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Aktive Verbindungen',
+          backgroundColor: '#36a2eb44',
+          borderColor: '#36a2eb',
+          borderWidth: 2,
+          fill: true,
+          data: dataPoints,
+        }]
+      },
+      options: {
+        responsive: true,
+        animation: false,
+        scales: {
+          x: {
+            ticks: { color: '#aaa' }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { color: '#aaa' }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: { color: '#fff' }
+          }
+        }
+      }
+    });
+
+    const socket = io();
+
+    socket.on('statistic', (data) => {
+      const time = new Date().toLocaleTimeString();
+      labels.push(time);
+      dataPoints.push(data.globalConnectionCount);
+
+      // Halte nur die letzten 20 Punkte
+      if (labels.length > 20) {
+        labels.shift();
+        dataPoints.shift();
+      }
+
+      chart.update();
+    });
+  </script>
+</body>
+</html>
