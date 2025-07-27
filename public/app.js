@@ -19,7 +19,7 @@ $(document).ready(() => {
     });
 
     if (window.settings.username) connect();
-})
+});
 
 function connect() {
     let uniqueId = window.settings.username || $('#uniqueIdInput').val();
@@ -39,7 +39,7 @@ function connect() {
             updateRoomStats();
 
         }).catch(errorMessage => {
-            $('#stateText').text(errorMessage);
+            $('#stateText').text(sanitize(errorMessage));
 
             // schedule next try if obs username set
             if (window.settings.username) {
@@ -47,7 +47,7 @@ function connect() {
                     connect(window.settings.username);
                 }, 30000);
             }
-        })
+        });
 
     } else {
         alert('no username entered');
@@ -56,17 +56,25 @@ function connect() {
 
 // Prevent Cross site scripting (XSS)
 function sanitize(text) {
-    return text.replace(/</g, '&lt;')
+    return String(text)
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 }
 
 function updateRoomStats() {
-    $('#roomStats').html(`Viewers: <b>${viewerCount.toLocaleString()}</b> Likes: <b>${likeCount.toLocaleString()}</b> Earned Diamonds: <b>${diamondsCount.toLocaleString()}</b>`)
+    $('#roomStats').html(
+        `Viewers: <b>${viewerCount.toLocaleString()}</b>
+         Likes: <b>${likeCount.toLocaleString()}</b>
+         Earned Diamonds: <b>${diamondsCount.toLocaleString()}</b>`
+    );
 }
 
 function generateUsernameLink(data) {
     // Zeige nickname falls vorhanden, sonst uniqueId
     let displayName = data.nickname || data.uniqueId;
-    return `<a class="usernamelink" href="https://www.tiktok.com/@${data.uniqueId}" target="_blank">${sanitize(displayName)}</a>`;
+    return `<a class="usernamelink" href="https://www.tiktok.com/@${data.uniqueId}" target="_blank">
+                ${sanitize(displayName)}
+            </a>`;
 }
 
 function isPendingStreak(data) {
@@ -77,7 +85,9 @@ function isPendingStreak(data) {
  * Add a new message to the chat container
  */
 function addChatItem(color, data, text, summarize) {
-    let container = location.href.includes('obs.html') ? $('.eventcontainer') : $('.chatcontainer');
+    let container = location.href.includes('obs.html')
+        ? $('.eventcontainer')
+        : $('.chatcontainer');
 
     if (container.find('div').length > 500) {
         container.find('div').slice(0, 200).remove();
@@ -89,14 +99,13 @@ function addChatItem(color, data, text, summarize) {
         <div class=${summarize ? 'temporary' : 'static'}>
             <img class="miniprofilepicture" src="${data.profilePictureUrl}">
             <span>
-                <b>${generateUsernameLink(data)}:</b> 
+                <b>${generateUsernameLink(data)}:</b>
                 <span style="color:${color}">${sanitize(text)}</span>
             </span>
         </div>
     `);
 
-    container.stop();
-    container.animate({
+    container.stop().animate({
         scrollTop: container[0].scrollHeight
     }, 400);
 }
@@ -105,27 +114,40 @@ function addChatItem(color, data, text, summarize) {
  * Add a new gift to the gift container
  */
 function addGiftItem(data) {
-    let container = location.href.includes('obs.html') ? $('.eventcontainer') : $('.giftcontainer');
+    let container = location.href.includes('obs.html')
+        ? $('.eventcontainer')
+        : $('.giftcontainer');
 
     if (container.find('div').length > 200) {
         container.find('div').slice(0, 100).remove();
     }
 
     let streakId = data.userId.toString() + '_' + data.giftId;
+    let safeDesc = sanitize(data.describe || '');
 
     let html = `
         <div data-streakid=${isPendingStreak(data) ? streakId : ''}>
             <img class="miniprofilepicture" src="${data.profilePictureUrl}">
             <span>
-                <b>${generateUsernameLink(data)}:</b> <span>${data.describe}</span><br>
+                <b>${generateUsernameLink(data)}:</b> <span>${safeDesc}</span><br>
                 <div>
                     <table>
                         <tr>
-                            <td><img class="gifticon" src="${data.giftPictureUrl}"></td>
+                            <td>
+                                <img class="gifticon" src="${data.giftPictureUrl}">
+                            </td>
                             <td>
                                 <span>Name: <b>${data.giftName}</b> (ID:${data.giftId})<span><br>
-                                <span>Repeat: <b style="${isPendingStreak(data) ? 'color:red' : ''}">x${data.repeatCount.toLocaleString()}</b><span><br>
-                                <span>Cost: <b>${(data.diamondCount * data.repeatCount).toLocaleString()} Diamonds</b><span>
+                                <span>
+                                    Repeat:
+                                    <b style="${isPendingStreak(data) ? 'color:red' : ''}">
+                                        x${data.repeatCount.toLocaleString()}
+                                    </b>
+                                <span><br>
+                                <span>
+                                    Cost:
+                                    <b>${(data.diamondCount * data.repeatCount).toLocaleString()} Diamonds</b>
+                                <span>
                             </td>
                         </tr>
                     </table>
@@ -142,8 +164,7 @@ function addGiftItem(data) {
         container.append(html);
     }
 
-    container.stop();
-    container.animate({
+    container.stop().animate({
         scrollTop: container[0].scrollHeight
     }, 800);
 }
@@ -154,7 +175,7 @@ connection.on('roomUser', (msg) => {
         viewerCount = msg.viewerCount;
         updateRoomStats();
     }
-})
+});
 
 // like stats
 connection.on('like', (msg) => {
@@ -166,9 +187,13 @@ connection.on('like', (msg) => {
     if (window.settings.showLikes === "0") return;
 
     if (typeof msg.likeCount === 'number') {
-        addChatItem('#447dd4', msg, msg.label.replace('{0:user}', '').replace('likes', `${msg.likeCount} likes`))
+        addChatItem(
+            '#447dd4',
+            msg,
+            msg.label.replace('{0:user}', '').replace('likes', `${msg.likeCount} likes`)
+        );
     }
-})
+});
 
 // Member join
 let joinMsgDelay = 0;
@@ -185,14 +210,13 @@ connection.on('member', (msg) => {
         joinMsgDelay -= addDelay;
         addChatItem('#21b2c2', msg, 'joined', true);
     }, joinMsgDelay);
-})
+});
 
 // New chat comment received
 connection.on('chat', (msg) => {
     if (window.settings.showChats === "0") return;
-
     addChatItem('', msg, msg.comment);
-})
+});
 
 // New gift received
 connection.on('gift', (data) => {
@@ -202,17 +226,15 @@ connection.on('gift', (data) => {
     }
 
     if (window.settings.showGifts === "0") return;
-
     addGiftItem(data);
-})
+});
 
 // share, follow
 connection.on('social', (data) => {
     if (window.settings.showFollows === "0") return;
-
     let color = data.displayType.includes('follow') ? '#ff005e' : '#2fb816';
     addChatItem(color, data, data.label.replace('{0:user}', ''));
-})
+});
 
 connection.on('streamEnd', () => {
     $('#stateText').text('Stream ended.');
@@ -223,4 +245,18 @@ connection.on('streamEnd', () => {
             connect(window.settings.username);
         }, 30000);
     }
-})
+});
+
+// connection status events
+connection.on('disconnect', () => {
+    $('#stateText').text('Verbindung getrennt.');
+});
+
+connection.on('connect', () => {
+    $('#stateText').text('Verbunden mit Server.');
+});
+
+connection.on('error', (err) => {
+    let message = typeof err === 'string' ? err : (err?.message || 'Unbekannter Fehler');
+    $('#stateText').text(`Fehler: ${sanitize(message)}`);
+});
