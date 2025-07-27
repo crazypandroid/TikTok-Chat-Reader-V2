@@ -17,14 +17,12 @@ $(document).ready(() => {
             connect();
         }
     });
-
     if (window.settings.username) connect();
 });
 
 function connect() {
     let uniqueId = window.settings.username || $('#uniqueIdInput').val();
     if (uniqueId !== '') {
-
         $('#stateText').text('Connecting...');
 
         connection.connect(uniqueId, {
@@ -48,7 +46,6 @@ function connect() {
                 }, 30000);
             }
         });
-
     } else {
         alert('no username entered');
     }
@@ -70,7 +67,7 @@ function updateRoomStats() {
 }
 
 function generateUsernameLink(data) {
-    // Zeige nickname falls vorhanden, sonst uniqueId
+    // show nickname if available, else uniqueId
     let displayName = data.nickname || data.uniqueId;
     return `<a class="usernamelink" href="https://www.tiktok.com/@${data.uniqueId}" target="_blank">
                 ${sanitize(displayName)}
@@ -85,14 +82,11 @@ function isPendingStreak(data) {
  * Add a new message to the chat container
  */
 function addChatItem(color, data, text, summarize) {
-    let container = location.href.includes('obs.html')
-        ? $('.eventcontainer')
-        : $('.chatcontainer');
+    let container = location.href.includes('obs.html') ? $('.eventcontainer') : $('.chatcontainer');
 
     if (container.find('div').length > 500) {
         container.find('div').slice(0, 200).remove();
     }
-
     container.find('.temporary').remove();
 
     container.append(`
@@ -105,18 +99,21 @@ function addChatItem(color, data, text, summarize) {
         </div>
     `);
 
-    container.stop().animate({
-        scrollTop: container[0].scrollHeight
-    }, 400);
+    // normal chat scroll
+    container.stop().animate({ scrollTop: container[0].scrollHeight }, 400);
+
+    // overlay scroll
+    const overlay = $('.eventcontainer');
+    if (overlay.length) {
+        overlay.stop().animate({ scrollTop: overlay[0].scrollHeight }, 400);
+    }
 }
 
 /**
  * Add a new gift to the gift container
  */
 function addGiftItem(data) {
-    let container = location.href.includes('obs.html')
-        ? $('.eventcontainer')
-        : $('.giftcontainer');
+    let container = location.href.includes('obs.html') ? $('.eventcontainer') : $('.giftcontainer');
 
     if (container.find('div').length > 200) {
         container.find('div').slice(0, 100).remove();
@@ -133,21 +130,11 @@ function addGiftItem(data) {
                 <div>
                     <table>
                         <tr>
-                            <td>
-                                <img class="gifticon" src="${data.giftPictureUrl}">
-                            </td>
+                            <td><img class="gifticon" src="${data.giftPictureUrl}"></td>
                             <td>
                                 <span>Name: <b>${data.giftName}</b> (ID:${data.giftId})<span><br>
-                                <span>
-                                    Repeat:
-                                    <b style="${isPendingStreak(data) ? 'color:red' : ''}">
-                                        x${data.repeatCount.toLocaleString()}
-                                    </b>
-                                <span><br>
-                                <span>
-                                    Cost:
-                                    <b>${(data.diamondCount * data.repeatCount).toLocaleString()} Diamonds</b>
-                                <span>
+                                <span>Repeat: <b style="${isPendingStreak(data) ? 'color:red' : ''}">x${data.repeatCount.toLocaleString()}</b><span><br>
+                                <span>Cost: <b>${(data.diamondCount * data.repeatCount).toLocaleString()} Diamonds</b><span>
                             </td>
                         </tr>
                     </table>
@@ -157,16 +144,20 @@ function addGiftItem(data) {
     `;
 
     let existingStreakItem = container.find(`[data-streakid='${streakId}']`);
-
     if (existingStreakItem.length) {
         existingStreakItem.replaceWith(html);
     } else {
         container.append(html);
     }
 
-    container.stop().animate({
-        scrollTop: container[0].scrollHeight
-    }, 800);
+    // gift container scroll
+    container.stop().animate({ scrollTop: container[0].scrollHeight }, 800);
+
+    // gift overlay scroll
+    const giftOverlay = $('.eventcontainer');
+    if (giftOverlay.length) {
+        giftOverlay.stop().animate({ scrollTop: giftOverlay[0].scrollHeight }, 800);
+    }
 }
 
 // viewer stats
@@ -185,7 +176,6 @@ connection.on('like', (msg) => {
     }
 
     if (window.settings.showLikes === "0") return;
-
     if (typeof msg.likeCount === 'number') {
         addChatItem(
             '#447dd4',
@@ -203,7 +193,6 @@ connection.on('member', (msg) => {
     let addDelay = 250;
     if (joinMsgDelay > 500) addDelay = 100;
     if (joinMsgDelay > 1000) addDelay = 0;
-
     joinMsgDelay += addDelay;
 
     setTimeout(() => {
@@ -214,19 +203,26 @@ connection.on('member', (msg) => {
 
 // New chat comment received
 connection.on('chat', (msg) => {
-    if (window.settings.showChats === "0") return;
-    addChatItem('', msg, msg.comment);
+    try {
+        if (window.settings.showChats === "0") return;
+        addChatItem('', msg, msg.comment);
+    } catch (e) {
+        console.error('Chat-Handler crashed:', e);
+    }
 });
 
 // New gift received
 connection.on('gift', (data) => {
-    if (!isPendingStreak(data) && data.diamondCount > 0) {
-        diamondsCount += (data.diamondCount * data.repeatCount);
-        updateRoomStats();
+    try {
+        if (!isPendingStreak(data) && data.diamondCount > 0) {
+            diamondsCount += (data.diamondCount * data.repeatCount);
+            updateRoomStats();
+        }
+        if (window.settings.showGifts === "0") return;
+        addGiftItem(data);
+    } catch (e) {
+        console.error('Gift-Handler crashed:', e);
     }
-
-    if (window.settings.showGifts === "0") return;
-    addGiftItem(data);
 });
 
 // share, follow
@@ -236,10 +232,9 @@ connection.on('social', (data) => {
     addChatItem(color, data, data.label.replace('{0:user}', ''));
 });
 
+// stream end
 connection.on('streamEnd', () => {
     $('#stateText').text('Stream ended.');
-
-    // schedule next try if obs username set
     if (window.settings.username) {
         setTimeout(() => {
             connect(window.settings.username);
@@ -248,15 +243,13 @@ connection.on('streamEnd', () => {
 });
 
 // connection status events
-connection.on('disconnect', () => {
+connection.on('disconnected', () => {
     $('#stateText').text('Verbindung getrennt.');
 });
-
-connection.on('connect', () => {
-    $('#stateText').text('Verbunden mit Server.');
+connection.on('reconnect', () => {
+    $('#stateText').text('Verbindung wiederhergestellt.');
 });
-
 connection.on('error', (err) => {
-    let message = typeof err === 'string' ? err : (err?.message || 'Unbekannter Fehler');
-    $('#stateText').text(`Fehler: ${sanitize(message)}`);
+    const msg = typeof err === 'string' ? err : (err?.message || 'Unbekannter Fehler');
+    $('#stateText').text(`Fehler: ${sanitize(msg)}`);
 });
